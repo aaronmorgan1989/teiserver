@@ -488,16 +488,28 @@ defmodule Teiserver.CacheUser do
   def send_direct_message(from_id, to_id, message) do
     # Replace SPADS command (starting with !) with lowercase version to prevent bypassing with capitalised command names
     # Ignore !# bot commands like !#JSONRPC
+
+    # Get the recipient's lobby and check for AIs
+    recipient_client = Teiserver.Client.get_client_by_id(to_id)
+    recipient_lobby_id = recipient_client && recipient_client.lobby_id
+
+    has_ai =
+      if recipient_lobby_id do
+        Teiserver.Battle.get_bots(recipient_lobby_id) |> Enum.any?()
+      else
+        false
+      end
+
     message =
       if String.starts_with?(message, "!") and !String.starts_with?(message, "!#") do
         message
         |> String.trim()
         |> String.downcase()
         |> case do
-          ["!cv", "joinas" | _] ->
+          ["!cv", "joinas" | _] when not has_ai ->
             "!cv joinas spec"
 
-          ["!callvote", "joinas" | _] ->
+          ["!callvote", "joinas" | _] when not has_ai ->
             "!callvote joinas spec"
 
           ["!joinas" | _] ->
